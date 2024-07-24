@@ -25,18 +25,23 @@ class pieceDataset(Dataset):
     
     def load_piece(self, index):
         piece_path = self.paths[index]
-        return pd.read_csv("piece_path")
+        return pd.read_csv(piece_path)
     
     def __getitem__(self, index):
         piece = self.load_piece(index)
         class_name = self.paths[index].parent.name
         class_idx = self.class_to_idx[class_name]
 
+        return piece, class_idx
 
-data_path = Path("./composer-influence-ai")
+
+data_path = Path("./composer-classifier")
 piece_path = data_path/"data"
 
 train_dir = piece_path/"train"
 
 train_data = pieceDataset(train_dir, transform=None)
-print(len(train_data))
+
+item, cidx = train_data.__getitem__(1200)
+print(item)
+print(cidx)
