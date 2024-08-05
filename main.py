@@ -8,6 +8,13 @@ import os
 import torch.nn as nn
 import torch.nn.functional as F
 
+def note():
+    def __init__(self, note, velocity, begin, channel):
+        self.note = note
+        self.velocity = velocity
+        self.begin = begin
+        self.channel = channel
+
 def find_classes(directory: str):
     classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
     
@@ -24,25 +31,28 @@ class pieceDataset(Dataset):
         self.classes, self.class_to_idx = find_classes(targ_dir)
         #tokendict = {'note_on': 'n', 'note_off': 'n', 'set_tempo': 't', 'time_signature': 's'}
 
-
-
     def __len__(self):
         return len(self.paths)
     
     def load_piece(self, index):
         piece_path = self.paths[index]
-        tokens = ""
         df = pd.read_csv(piece_path)
-        print(df.iloc[619]['type'])
+        arr = []
         for i in range(len(df)):
             l = df.iloc[i]
             if l['type'] == 'note_off' or l['type'] == 'note_on':
-                tokens += f"{l['tick']}" + 'c' + f"{l['channel']}" + 'n' + f"{l['note']}" + 'v' + f"{l['velocity']}" + " "
-            elif l['type'] == 'set_tempo':
-                tokens += f"{l['tick']}" + 't' + f"{l['tempo']}" + " "
-            elif l['type'] == 'time_signature':
-                tokens += f"{l['tick']}" + 'u' + f"{l['numerator']}" + 'd' + f"{l['denominator']}" + " "
-        return tokens
+                j = i+1
+                while j < len(df):
+                    l2 = df.iloc[j]
+                    if l['note'] == l2['note'] and l['channel'] == l2['channel'] and l2['velocity'] == 0:
+                        arr.append([l['note'],l['velocity'],l2['tick']-l['tick'], l['channel']])
+                        break
+                    j+=1
+        print(arr)
+        tens = torch.tensor(arr)
+        return F.one_hot(tens.argmax(dim=1), num_classes=16)
+        return tens.index_select(dim=1, index=3)
+
     
     def __getitem__(self, index):
         piece = self.load_piece(index)
@@ -75,4 +85,4 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-print(train_data.__getitem__(0)[0])
+print(train_data.__getitem__(700)[0])
