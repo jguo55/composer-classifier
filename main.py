@@ -50,8 +50,7 @@ class pieceDataset(Dataset):
                     j+=1
         print(arr)
         tens = torch.tensor(arr)
-        return F.one_hot(tens.argmax(dim=1), num_classes=16)
-        return tens.index_select(dim=1, index=3)
+        return tens
 
     
     def __getitem__(self, index):
