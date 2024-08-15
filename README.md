@@ -1,4 +1,4 @@
-classifies a sequence of notes into which composer was most likely to compose them.
+classifies a sequence of notes into which composer was most likely to compose them. \n
 dataset from: [https://www.kaggle.com/datasets/vincentloos/classical-music-midi-as-csv](url)
 
 composers: Bach, Beethoveen, Brahms, Mozart, Chopin
