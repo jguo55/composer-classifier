@@ -5,47 +5,55 @@ import os
 import pandas as pd
 
 data_path = Path("./composer-classifier")
-piece_path = data_path/"data"
-train_dir = piece_path/"train"
-test_dir = piece_path/"test"
 
-paths = list(Path(train_dir).glob("*/*.csv"))
+piece_path = data_path/"raws"
 
-df = pd.read_csv(paths[0])
-notes = []
-steps = []
-durations = []
-channels = []
-velocities = []
+paths = list(Path(piece_path).glob("*/*.csv"))
 
-#find first note for accurate step
-for i in range(len(df)):
-    l = df.iloc[i]
-    if l['type'] == 'note_on':
-        prev_start = l['tick']
-        break
+for k in range(len(paths)):
+    filename = os.path.basename(paths[k])
+    dirname = os.path.basename(os.path.dirname(paths[k]))
+    path = str(paths[k])
+    df = pd.read_csv(paths[k])
+    notes = []
+    steps = []
+    durations = []
+    channels = []
+    velocities = []
+    notepair = {}
+    nopairlines = []
 
-for i in range(len(df)):
-    l = df.iloc[i]
-    if l['velocity'] != 0:
-        j = i+1
-        while j < len(df):
-            l2 = df.iloc[j]
-            if l['note'] == l2['note'] and l['channel'] == l2['channel'] and l2['velocity'] == 0:
+    #find first note for accurate step
+    for i in range(len(df)):
+        l = df.iloc[i]
+        if l['type'] == 'note_on':
+            prev_start = l['tick']
+            break
+
+    for i in range(len(df)):
+        l = df.iloc[i]
+        if i % 100 == 0:
+            print(f"{k}/{len(paths)} -- " + path + f" -- {i}/{len(df)} lines")
+
+        notetoken = f"{l['note']}+{l['channel']}"
+        if l['velocity'] != 0 and l['type'] == 'note_on':
+            notepair[notetoken] = [l['tick'],l['velocity'],l['tick']-prev_start] #[tick, velocity, step]
+            prev_start = l["tick"]
+        elif l['velocity'] == 0 or l['type'] == 'note_off':
+            if notetoken in notepair:
                 notes.append(l['note'])
-                steps.append(l['tick']-prev_start)
-                durations.append(l2['tick']-l['tick'])
+                steps.append(notepair[notetoken][2])
+                durations.append(l['tick']-notepair[notetoken][0])
                 channels.append(l['channel'])
-                velocities.append(l['velocity'])
-                prev_start = l['tick']
-                break
-            j+=1
-dict = {'note': notes, 'step': steps, 'duration': durations, 'channel': channels, 'velocity': velocities}
-output = pd.DataFrame(dict)
+                velocities.append(notepair[notetoken][1])
+                notepair.pop(notetoken)
+            else:
+                nopairlines.append(f"{i}.{notetoken}")
 
-print(paths[0])
-print(output)
+    #print("unpaired lines: "+ str(nopairlines))
+    #print("unpaired notes: "+ str(notepair))
+    dict = {'note': notes, 'step': steps, 'duration': durations, 'channel': channels, 'velocity': velocities}
+    output = pd.DataFrame(dict)
 
-filename = "test.csv"
-outpath = data_path/"sequences"/filename
-output.to_csv(outpath)
+    outpath = data_path/"data"/"train"/dirname/filename
+    output.to_csv(outpath)
