@@ -56,6 +56,9 @@ test_dir = piece_path/"test"
 train_data = pieceDataset(train_dir, transform=None)
 test_data = pieceDataset(test_dir, transform=None)
 
+train_dataloader = DataLoader(train_data, batch_size=1, shuffle=True)
+test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
+
 
 all_categories = train_data.classes
 category_lines = train_data.class_to_idx
@@ -102,13 +105,16 @@ learning_rate = 0.005 # If you set this too high, it might explode. If too low, 
 
 criterion = nn.NLLLoss()
 
+notes_trained = 0
 def train(category_tensor, line_tensor):
     hidden = rnn.initHidden()
 
     rnn.zero_grad()
 
     for i in range(line_tensor.size()[0]):
-        output, hidden = rnn(torch.flatten(line_tensor[i]), hidden) #hello?
+        output, hidden = rnn(torch.flatten(line_tensor[0][i]), hidden) 
+        global notes_trained
+        notes_trained += 1 #somethings happening and i fear it is not what i want it to do
 
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -140,23 +146,23 @@ def timeSince(since):
 start = time.time()
 
 
-for iter in range(len(train_data)):
-    #iter[1], iter[0]
-    tup = train_data.__getitem__(iter)
-    category = tup[1]
+for iter in enumerate(train_dataloader):
+    category = iter[1][1] #AYO
     category_tensor = torch.tensor([category])
-    line_tensor = tup[0]
-    line = tup[2]
+    line_tensor = iter[1][0]
+    line = iter[1][2]
     output, loss = train(category_tensor, line_tensor)
     current_loss += loss
 
     # Print ``iter`` number, loss, name and guess
-    if iter % print_every == 0:
+    if iter[0] % print_every == 0:
         guess, guess_i = categoryFromOutput(output)
-        correct = '✓' if guess == category else '✗ (%s)' % category
-        print('%d %d%% (%s) %.4f %s / %s %s' % (iter, iter / n_iters * 100, timeSince(start), loss, line, guess, correct))
+        correct = '✓' if guess == all_categories[category] else '✗ (%s)' % category
+        print('%d %d%% (%s) %.4f %s / %s %s' % (iter[0], iter[0] / n_iters * 100, timeSince(start), loss, line, guess, correct))
 
     # Add current loss avg to list of losses
-    if iter % plot_every == 0:
+    if iter[0] % plot_every == 0:
         all_losses.append(current_loss / plot_every)
         current_loss = 0
+
+print(notes_trained)
