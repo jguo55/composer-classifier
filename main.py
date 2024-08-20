@@ -42,8 +42,9 @@ class pieceDataset(Dataset):
         piece = self.load_piece(index)
         class_name = self.paths[index].parent.name
         class_idx = self.class_to_idx[class_name]
+        piece_name = os.path.basename(self.paths[index])
 
-        return piece, class_idx
+        return piece, class_idx, piece_name
 
 # __getitem__(index)[0] is the tensor, __getitem__(index)[1] is the label
 
@@ -55,8 +56,6 @@ test_dir = piece_path/"test"
 train_data = pieceDataset(train_dir, transform=None)
 test_data = pieceDataset(test_dir, transform=None)
 
-trainloader = DataLoader(dataset="train_data", batch_size=64, num_workers=0,shuffle=True)
-testloader = DataLoader(dataset="test_data", batch_size=1, num_workers=0,shuffle=True)
 
 all_categories = train_data.classes
 category_lines = train_data.class_to_idx
@@ -68,8 +67,9 @@ device = (
     if torch.backends.mps.is_available()
     else "cpu"
 )
-#i have no clue what im doing past this point!!!
-'''
+
+#print(train_data.__getitem__(0)[0][1])
+
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(RNN, self).__init__()
@@ -91,11 +91,16 @@ class RNN(nn.Module):
         return torch.zeros(1, self.hidden_size)
 
 n_hidden = 128
-rnn = RNN(3, n_hidden, 5) #each note has 3 features and 5 categories it could be
+rnn = RNN(48, n_hidden, 5)
+
+def categoryFromOutput(output):
+    top_n, top_i = output.topk(1)
+    category_i = top_i[0].item()
+    return all_categories[category_i], category_i
+
+learning_rate = 0.005 # If you set this too high, it might explode. If too low, it might not learn
 
 criterion = nn.NLLLoss()
-
-learning_rate = 0.005
 
 def train(category_tensor, line_tensor):
     hidden = rnn.initHidden()
@@ -103,7 +108,7 @@ def train(category_tensor, line_tensor):
     rnn.zero_grad()
 
     for i in range(line_tensor.size()[0]):
-        output, hidden = rnn(line_tensor[i], hidden)
+        output, hidden = rnn(torch.flatten(line_tensor[i]), hidden) #hello?
 
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -114,5 +119,44 @@ def train(category_tensor, line_tensor):
 
     return output, loss.item()
 
-print(train_data)
-'''
+import time
+import math
+
+print_every = 1
+plot_every = 1000
+n_iters = 250
+
+# Keep track of losses for plotting
+current_loss = 0
+all_losses = []
+
+def timeSince(since):
+    now = time.time()
+    s = now - since
+    m = math.floor(s / 60)
+    s -= m * 60
+    return '%dm %ds' % (m, s)
+
+start = time.time()
+
+
+for iter in range(len(train_data)):
+    #iter[1], iter[0]
+    tup = train_data.__getitem__(iter)
+    category = tup[1]
+    category_tensor = torch.tensor([category])
+    line_tensor = tup[0]
+    line = tup[2]
+    output, loss = train(category_tensor, line_tensor)
+    current_loss += loss
+
+    # Print ``iter`` number, loss, name and guess
+    if iter % print_every == 0:
+        guess, guess_i = categoryFromOutput(output)
+        correct = '✓' if guess == category else '✗ (%s)' % category
+        print('%d %d%% (%s) %.4f %s / %s %s' % (iter, iter / n_iters * 100, timeSince(start), loss, line, guess, correct))
+
+    # Add current loss avg to list of losses
+    if iter % plot_every == 0:
+        all_losses.append(current_loss / plot_every)
+        current_loss = 0
