@@ -71,8 +71,6 @@ device = (
     else "cpu"
 )
 
-#print(train_data.__getitem__(0)[0][1])
-
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(RNN, self).__init__()
@@ -100,12 +98,11 @@ def categoryFromOutput(output):
     top_n, top_i = output.topk(1)
     category_i = top_i[0].item()
     return all_categories[category_i], category_i
-
+'''
 learning_rate = 0.005 # If you set this too high, it might explode. If too low, it might not learn
 
 criterion = nn.NLLLoss()
 
-notes_trained = 0
 def train(category_tensor, line_tensor):
     hidden = rnn.initHidden()
 
@@ -113,8 +110,6 @@ def train(category_tensor, line_tensor):
 
     for i in range(line_tensor[0].size()[0]):
         output, hidden = rnn(torch.flatten(line_tensor[0][i]), hidden) 
-        global notes_trained
-        notes_trained += 1 #somethings happening and i fear it is not what i want it to do
 
     loss = criterion(output, category_tensor)
     loss.backward()
@@ -145,25 +140,54 @@ def timeSince(since):
 
 start = time.time()
 
+for epoch in range(2):
+    for iter in enumerate(train_dataloader):
+        category = iter[1][1]
+        category_tensor = torch.tensor([category])
+        line_tensor = iter[1][0]
+        line = iter[1][2]
+        output, loss = train(category_tensor, line_tensor)
+        current_loss += loss
 
-for iter in enumerate(train_dataloader):
+        # Print ``iter`` number, loss, name and guess
+        if iter[0] % print_every == 0:
+            guess, guess_i = categoryFromOutput(output)
+            correct = '✓' if guess == all_categories[category] else '✗ (%s)' % all_categories[category]
+            print('%s %d %d%% (%s) %.4f %s / %s %s' % (epoch+1, iter[0]+1, iter[0] / n_iters * 100, timeSince(start), loss, line, guess, correct))
+
+        # Add current loss avg to list of losses
+        if iter[0] % plot_every == 0:
+            all_losses.append(current_loss / plot_every)
+            current_loss = 0
+
+model_path = data_path/"model"/"model_weights.pth"
+torch.save(rnn, model_path)
+'''
+
+model_path = data_path/"model"/"model_weights.pth"
+
+rnn = torch.load(model_path)
+def evaluate(line_tensor):
+    hidden = rnn.initHidden()
+
+    for i in range(line_tensor[0].size()[0]):
+        output, hidden = rnn(torch.flatten(line_tensor[0][i]), hidden) 
+    return output
+
+acc = 0
+total = 0
+for iter in enumerate(test_dataloader):
+    total+=1
     category = iter[1][1]
     category_tensor = torch.tensor([category])
     line_tensor = iter[1][0]
     line = iter[1][2]
-    output, loss = train(category_tensor, line_tensor)
-    current_loss += loss
+    output = evaluate(line_tensor)
 
-    # Print ``iter`` number, loss, name and guess
-    if iter[0] % print_every == 0:
-        guess, guess_i = categoryFromOutput(output)
-        correct = '✓' if guess == all_categories[category] else '✗ (%s)' % all_categories[category]
-        print('%d %d%% (%s) %.4f %s / %s %s' % (iter[0], iter[0] / n_iters * 100, timeSince(start), loss, line, guess, correct))
+    guess, guess_i = categoryFromOutput(output)
+        # Print ``iter`` number, loss, name and guess
+    if guess == all_categories[category]:
+        acc+=1
 
-    # Add current loss avg to list of losses
-    if iter[0] % plot_every == 0:
-        all_losses.append(current_loss / plot_every)
-        current_loss = 0
-
-print(notes_trained)
+    print(f"{total} {acc*100/total}% accuracy, guess: {guess}, answer: {all_categories[category]}")
 
