@@ -111,7 +111,7 @@ def train(category_tensor, line_tensor):
 
     rnn.zero_grad()
 
-    for i in range(line_tensor.size()[0]):
+    for i in range(line_tensor[0].size()[0]):
         output, hidden = rnn(torch.flatten(line_tensor[0][i]), hidden) 
         global notes_trained
         notes_trained += 1 #somethings happening and i fear it is not what i want it to do
@@ -147,7 +147,7 @@ start = time.time()
 
 
 for iter in enumerate(train_dataloader):
-    category = iter[1][1] #AYO
+    category = iter[1][1]
     category_tensor = torch.tensor([category])
     line_tensor = iter[1][0]
     line = iter[1][2]
@@ -157,7 +157,7 @@ for iter in enumerate(train_dataloader):
     # Print ``iter`` number, loss, name and guess
     if iter[0] % print_every == 0:
         guess, guess_i = categoryFromOutput(output)
-        correct = '✓' if guess == all_categories[category] else '✗ (%s)' % category
+        correct = '✓' if guess == all_categories[category] else '✗ (%s)' % all_categories[category]
         print('%d %d%% (%s) %.4f %s / %s %s' % (iter[0], iter[0] / n_iters * 100, timeSince(start), loss, line, guess, correct))
 
     # Add current loss avg to list of losses
@@ -166,3 +166,4 @@ for iter in enumerate(train_dataloader):
         current_loss = 0
 
 print(notes_trained)
+
