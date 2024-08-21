@@ -98,7 +98,7 @@ def categoryFromOutput(output):
     top_n, top_i = output.topk(1)
     category_i = top_i[0].item()
     return all_categories[category_i], category_i
-'''
+
 learning_rate = 0.005 # If you set this too high, it might explode. If too low, it might not learn
 
 criterion = nn.NLLLoss()
@@ -162,9 +162,6 @@ for epoch in range(2):
 
 model_path = data_path/"model"/"model_weights.pth"
 torch.save(rnn, model_path)
-'''
-
-model_path = data_path/"model"/"model_weights.pth"
 
 rnn = torch.load(model_path)
 def evaluate(line_tensor):
