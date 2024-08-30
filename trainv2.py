@@ -71,7 +71,7 @@ class RNN(nn.Module):
     
 
 input_size = 3
-hidden_size = 128
+hidden_size = 32
 output_size = 5
 n_layers = 1
 
@@ -102,7 +102,7 @@ for epoch in range(epochs):
 
         print(f"{epoch+1} {num+1}/{trainlen} {num/trainlen*100:.1f}% ({timeSince(start)}) {loss:.4f} {name} Guess={guess} Correct={answer}")
 
-model_path = data_path/"model"/"model_weights_v2.pth"
+model_path = data_path/"model"/"model_weights_v2_h32.pth"
 torch.save(model, model_path)
 
 #testing
