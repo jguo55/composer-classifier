@@ -4,6 +4,7 @@ from pathlib import Path
 from pieceDataset import pieceDataset
 
 import torch.nn as nn
+import torch.nn.functional as F
 
 import time
 import math
@@ -87,13 +88,16 @@ trainlen = len(train_dataloader)
 testlen = len(test_dataloader)
 
 for epoch in range(epochs):
+    model.train()
     for num, (sequence, labels, name) in enumerate(train_dataloader):
-        #clear gradients
-        optimizer.zero_grad()
         #forward prop
         outputs = model(sequence)
         #calculate loss
         loss = criterion(outputs, labels)
+
+        #clear gradients
+        optimizer.zero_grad()
+
         loss.backward()
         optimizer.step()
 
@@ -102,10 +106,11 @@ for epoch in range(epochs):
 
         print(f"{epoch+1} {num+1}/{trainlen} {num/trainlen*100:.1f}% ({timeSince(start)}) {loss:.4f} {name} Guess={guess} Correct={answer}")
 
-model_path = data_path/"model"/"model_weights_v2_h32.pth"
+model_path = data_path/"model"/"model_weights_v2_norm.pth"
 torch.save(model, model_path)
 
 #testing
+model.eval()
 correct = 0
 total = 0
 for num, (sequence, labels, name) in enumerate(test_dataloader):

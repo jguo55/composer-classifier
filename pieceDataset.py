@@ -49,9 +49,9 @@ class pieceDataset(Dataset):
         
         for i in range(len(df)):
             l = df.iloc[i]
-            tensor[i][0] = l['note']
-            tensor[i][1] = l['step']
-            tensor[i][2] = l['duration']
+            tensor[i][0] = (l['note']-44)/88
+            tensor[i][1] = (l['step']-512)/1024
+            tensor[i][2] = (l['duration']-1024)/2048
         return (tensor)
         
     
