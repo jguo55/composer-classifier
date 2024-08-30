@@ -43,19 +43,19 @@ class RNN(nn.Module):
         self.i2h = nn.Linear(input_size, hidden_size)
         self.h2h = nn.Linear(hidden_size, hidden_size)
         self.h2o = nn.Linear(hidden_size, output_size)
-        self.softmax = nn.LogSoftmax(dim=1)
+        #self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, input, hidden):
         hidden = F.tanh(self.i2h(input) + self.h2h(hidden))
         output = self.h2o(hidden)
-        output = self.softmax(output)
+        #output = self.softmax(output)
         return output, hidden
 
     def initHidden(self):
         return torch.zeros(1, self.hidden_size)
 
 n_hidden = 128
-rnn = RNN(48, n_hidden, 5)
+rnn = RNN(3, n_hidden, 5)
 
 def categoryFromOutput(output):
     top_n, top_i = output.topk(1)
@@ -64,7 +64,8 @@ def categoryFromOutput(output):
 
 learning_rate = 0.005 # If you set this too high, it might explode. If too low, it might not learn
 
-criterion = nn.NLLLoss()
+weights = torch.tensor([1638/1025, 1638/181, 1638/60, 1638/136, 1638/236])  
+criterion = nn.CrossEntropyLoss(weights)
 
 def train(category_tensor, line_tensor):
     hidden = rnn.initHidden()
@@ -103,6 +104,8 @@ for iter in enumerate(train_dataloader):
     category_tensor = torch.tensor([category])
     line_tensor = iter[1][0]
     line = iter[1][2]
+    print(category_tensor.size())
+    print(line_tensor.size())
     output, loss = train(category_tensor, line_tensor)
     current_loss += loss
 
@@ -110,7 +113,7 @@ for iter in enumerate(train_dataloader):
     correct = '✓' if guess == all_categories[category] else '✗ (%s)' % all_categories[category]
     print('%d %d%% (%s) %.4f %s / %s %s' % (iter[0]+1, iter[0] / n_iters * 100, timeSince(start), loss, line, guess, correct))
 
-model_path = data_path/"model"/"model_weights.pth"
+model_path = data_path/"model"/"model_weights_norm_nochan.pth"
 torch.save(rnn, model_path)
 
 def evaluate(line_tensor):
