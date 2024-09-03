@@ -66,8 +66,11 @@ class RNN(nn.Module):
     #forward is where we connect all the layers basically
     def forward(self, x):
         h0 = torch.zeros(self.n_layers, x.size(0), self.hidden_size)
+        print(len(x))
         out, hn = self.rnn(x, h0)
+        print(out.size())
         out = self.linear(out[:,-1,:])
+        print(out.size())
         return out
     
 

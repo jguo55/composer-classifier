@@ -10,7 +10,6 @@ import time
 import math
 
 #helper methods
-
 def timeSince(since):
     now = time.time()
     s = now - since
@@ -23,10 +22,10 @@ def categoryFromOutput(output):
     category_i = top_i[0].item()
     return all_categories[category_i], category_i
 
-def categoryToTensor(category):
-    cat_tensor = [0]*5
-    cat_tensor[category] = 1
-    return torch.tensor(cat_tensor)
+def tokentoidx(sequence):
+    for i in range(len(sequence)):
+        sequence[i] = vocab[sequence[i]]
+    return sequence
 
 #data
 data_path = Path("./composer-classifier")
@@ -36,6 +35,7 @@ full_data = pieceDataset(piece_path)
 
 train_data, test_data = torch.utils.data.random_split(full_data, [0.8, 0.2])
 
+full_dataloader = DataLoader(full_data, batch_size=1, shuffle=True) #to build vocab
 train_dataloader = DataLoader(train_data, batch_size=1, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
 
@@ -50,38 +50,55 @@ device = (
     else "cpu"
 )
 
+start = time.time()
+
+vocab = {}
+total = len(full_dataloader)
+for num, (sequence, labels, name) in enumerate(full_dataloader):
+    for token in sequence:
+        if token not in vocab:
+            vocab[token] = len(vocab)
+    print(f"building vocab {num+1}/{total} ({timeSince(start)})")
+
+
 #model & training
 class RNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, n_layers):
+    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, n_layers):
         super(RNN, self).__init__()
-        self.input_size = input_size
+        self.vocab_size = vocab_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.n_layers = n_layers
+        self.embedding_size = embedding_size
 
-        self.lstm = nn.LSTM(input_size, hidden_size, n_layers, batch_first=True)
+        self.embedding = nn.Embedding(vocab_size,embedding_size)
+        self.lstm = nn.LSTM(embedding_size, hidden_size, n_layers, batch_first=True)
 
         self.linear = nn.Linear(hidden_size, output_size)
     
     #forward is where we connect all the layers basically
     def forward(self, x):
+        x = torch.tensor([tokentoidx(x)])
+        x = self.embedding(x)
         out, hn = self.lstm(x)
         out = self.linear(out[:,-1,:])
         return out
     
 
-input_size = 3
-hidden_size = 32
+hidden_size = 128
 output_size = 5
 n_layers = 1
+embed_size = 64
+vocab_size = len(vocab)
 
-model = RNN(input_size, hidden_size, output_size, n_layers)
+print(vocab_size)
+
+model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
 epochs = 1
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 #weights = torch.tensor([1638/1025, 1638/181, 1638/60, 1638/136, 1638/236])  
 criterion = nn.CrossEntropyLoss()
-start = time.time()
 
 trainlen = len(train_dataloader)
 testlen = len(test_dataloader)

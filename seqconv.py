@@ -1,5 +1,6 @@
 #converts csv midi files to a note sequence csv
 #makes each note has a duration, rather than a start/end time
+#start from the back and append, then reverse all the lists
 from pathlib import Path
 import os
 import pandas as pd
@@ -23,37 +24,34 @@ for k in range(len(paths)):
     notepair = {}
     nopairlines = []
 
-    #find first note for accurate step
-    for i in range(len(df)):
-        l = df.iloc[i]
-        if l['type'] == 'note_on':
-            prev_start = l['tick']
-            break
-
-    for i in range(len(df)):
+    prev_end = df.iloc[len(df)-1]['tick']
+    for i in range(len(df)-1, -1, -1):
         l = df.iloc[i]
         if i % 100 == 0:
             print(f"{k}/{len(paths)} -- " + path + f" -- {i}/{len(df)} lines")
 
-        notetoken = f"{l['note']}+{l['channel']}"
-        if l['velocity'] != 0 and l['type'] == 'note_on':
-            notepair[notetoken] = [l['tick'],l['velocity'],l['tick']-prev_start] #[tick, velocity, step]
-            prev_start = l["tick"]
-        elif l['velocity'] == 0 or l['type'] == 'note_off':
+        notetoken = f"n_{l['note']} c_{l['channel']}"
+        if l['velocity'] == 0 or l['type'] == 'note_off':
+            notepair[notetoken] = [l['tick'],l['velocity'],prev_end-l['tick']] #[tick, velocity, step]
+            prev_end=l['tick']
+        elif l['velocity'] > 0 and l['type'] == 'note_on':
             if notetoken in notepair:
                 notes.append(l['note'])
                 steps.append(notepair[notetoken][2])
-                durations.append(l['tick']-notepair[notetoken][0])
+                durations.append(notepair[notetoken][0]-l['tick'])
                 channels.append(l['channel'])
                 velocities.append(notepair[notetoken][1])
                 notepair.pop(notetoken)
             else:
                 nopairlines.append(f"{i}.{notetoken}")
 
-    #print("unpaired lines: "+ str(nopairlines))
-    #print("unpaired notes: "+ str(notepair))
+    notes.reverse()
+    steps.reverse()
+    durations.reverse()
+    channels.reverse()
+    velocities.reverse()
     dict = {'note': notes, 'step': steps, 'duration': durations, 'channel': channels, 'velocity': velocities}
     output = pd.DataFrame(dict)
 
-    outpath = data_path/"data"/"train"/dirname/filename
+    outpath = data_path/"data"/dirname/filename
     output.to_csv(outpath)

@@ -30,29 +30,37 @@ class pieceDataset(Dataset):
     def __len__(self):
         return len(self.paths)
     
-    #needs to be normalized, the whole dataset, idk how i would do that
     def load_piece(self, index):
         piece_path = self.paths[index]
         df = pd.read_csv(piece_path)
-        tensor = torch.zeros(len(df), 3)
+        tokens = []
+        for i in range(len(df)):
+            l = df.iloc[i]
+            tokens.append(f"n_{l['note']}")
+            tokens.append(f"s_{l['step']}")
+            tokens.append(f"d_{l['duration']}")
+        return tokens
+        '''
+        tensor = torch.zeros(len(df), 16,3)
         tensor.to(device)
         
-        '''
         for i in range(len(df)):
             l = df.iloc[i]
             channel = int(l['channel'])
-            tensor[i][channel][0] = l['note']
-            tensor[i][channel][1] = l['step']
-            tensor[i][channel][2] = l['duration']
-        return torch.nn.functional.normalize(tensor)
+            tensor[i][channel*3] = (l['note']-44)
+            tensor[i][channel*3+1] = (l['step']-512)
+            tensor[i][channel*3+2] = (l['duration']-1024)
+        return (tensor)
         '''
         
+        '''
         for i in range(len(df)):
             l = df.iloc[i]
             tensor[i][0] = (l['note']-44)/88
             tensor[i][1] = (l['step']-512)/1024
             tensor[i][2] = (l['duration']-1024)/2048
         return (tensor)
+        '''
         
     
     def __getitem__(self, index):

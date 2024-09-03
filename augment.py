@@ -1,4 +1,4 @@
-#stretches the time of the pieces
+#use this script to augment the data by pitching up/down, or stretching the duration of the pieces
 from pathlib import Path
 import os
 import pandas as pd
@@ -27,11 +27,11 @@ for k in range(len(paths)):
         l = df.iloc[i]
         if i % 100 == 0:
             print(f"{k}/{len(paths)} -- " + path + f" -- {i}/{len(df)} lines")
-            notes.append(l['note']+pitch)
-            steps.append(l['step']*stretch)
-            durations.append(l['duration']*stretch)
-            channels.append(l['channel'])
-            velocities.append(l['velocity'])
+        notes.append(l['note']+pitch)
+        steps.append(l['step']*stretch)
+        durations.append(l['duration']*stretch)
+        channels.append(l['channel'])
+        velocities.append(l['velocity'])
     
     filename = f"s{stretch}p{pitch}-{filename}"
 
