@@ -1,9 +1,11 @@
 #converts csv midi files to a note sequence csv
 #makes each note has a duration, rather than a start/end time
 #start from the back and append, then reverse all the lists
+#also split the data into train/test sets 80-20
 from pathlib import Path
 import os
 import pandas as pd
+import random
 
 data_path = Path("./composer-classifier")
 
@@ -53,5 +55,7 @@ for k in range(len(paths)):
     dict = {'note': notes, 'step': steps, 'duration': durations, 'channel': channels, 'velocity': velocities}
     output = pd.DataFrame(dict)
 
-    outpath = data_path/"data"/dirname/filename
+    split = "test" if random.random() > 0.8 else "train"
+
+    outpath = data_path/"data"/split/dirname/filename
     output.to_csv(outpath)

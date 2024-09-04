@@ -5,12 +5,14 @@ import pandas as pd
 
 data_path = Path("./composer-classifier")
 
-piece_path = data_path/"data"
+piece_path = data_path/"data"/"train"
 
 paths = list(Path(piece_path).glob("*/*.csv"))
 
-stretch = 0.9
-pitch = 0 #+/- pitch
+
+#change augmentation vars here
+stretch = 1
+pitch = 4 #+/- pitch
 
 for k in range(len(paths)):
     filename = os.path.basename(paths[k])

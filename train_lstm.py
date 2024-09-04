@@ -24,23 +24,28 @@ def categoryFromOutput(output):
 
 def tokentoidx(sequence):
     for i in range(len(sequence)):
-        sequence[i] = vocab[sequence[i]]
+        if sequence[i] in vocab:
+            sequence[i] = vocab[sequence[i]]
+        else:
+            sequence[i] = 0 #unk
     return sequence
 
-#data
+#data 1286 train, 352 test
 data_path = Path("./composer-classifier")
 piece_path = data_path/"data"
 
-full_data = pieceDataset(piece_path)
 
-train_data, test_data = torch.utils.data.random_split(full_data, [0.8, 0.2])
+train_path = piece_path/"train"
+test_path = piece_path/"test"
 
-full_dataloader = DataLoader(full_data, batch_size=1, shuffle=True) #to build vocab
+train_data = pieceDataset(train_path)
+test_data = pieceDataset(test_path)
+
 train_dataloader = DataLoader(train_data, batch_size=1, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
 
-all_categories = full_data.classes
-category_lines = full_data.class_to_idx
+all_categories = train_data.classes
+category_lines = train_data.class_to_idx
 
 device = (
     "cuda"
@@ -52,9 +57,9 @@ device = (
 
 start = time.time()
 
-vocab = {}
-total = len(full_dataloader)
-for num, (sequence, labels, name) in enumerate(full_dataloader):
+vocab = {"UNK": 0}
+total = len(train_dataloader)
+for num, (sequence, labels, name) in enumerate(train_dataloader):
     for token in sequence:
         if token not in vocab:
             vocab[token] = len(vocab)
