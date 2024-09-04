@@ -39,7 +39,7 @@ for k in range(len(paths)):
             channels.append(l['channel'])
             velocities.append(l['velocity'])
         
-        filename = f"aug_s{stretch}p{pitch}-{filename}_"
+        filename = f"aug_s{stretch}p{pitch}_{filename}"
 
         dict = {'note': notes, 'step': steps, 'duration': durations, 'channel': channels, 'velocity': velocities}
         output = pd.DataFrame(dict)
