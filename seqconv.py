@@ -9,9 +9,26 @@ import random
 
 data_path = Path("./composer-classifier")
 
+classes = ["Bach", "Beethoven", "Brahms", "Chopin", "Mozart"]
+
+for i in classes:
+    testpath = data_path/"data"/"test"/i
+    trainpath = data_path/"data"/"train"/i
+    os.makedirs(testpath)
+    os.makedirs(trainpath)
+
 piece_path = data_path/"raws"
 
 paths = list(Path(piece_path).glob("*/*.csv"))
+
+#rounds each note value to the nearest 15,20,multiple of 30 to decrease vocab size
+def roundnote(n):
+    if n < 18:
+        return 15
+    elif n < 25:
+        return 20
+    else:
+        return 30*round(n/30)
 
 for k in range(len(paths)):
     filename = os.path.basename(paths[k])
@@ -29,7 +46,7 @@ for k in range(len(paths)):
     prev_end = df.iloc[len(df)-1]['tick']
     for i in range(len(df)-1, -1, -1):
         l = df.iloc[i]
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print(f"{k}/{len(paths)} -- " + path + f" -- {i}/{len(df)} lines")
 
         notetoken = f"n_{l['note']} c_{l['channel']}"
@@ -40,7 +57,7 @@ for k in range(len(paths)):
             if notetoken in notepair:
                 notes.append(l['note'])
                 steps.append(notepair[notetoken][2])
-                durations.append(notepair[notetoken][0]-l['tick'])
+                durations.append(roundnote(notepair[notetoken][0]-l['tick']))
                 channels.append(l['channel'])
                 velocities.append(notepair[notetoken][1])
                 notepair.pop(notetoken)

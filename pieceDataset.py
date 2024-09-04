@@ -37,8 +37,9 @@ class pieceDataset(Dataset):
         for i in range(len(df)):
             l = df.iloc[i]
             tokens.append(f"n_{l['note']}")
-            tokens.append(f"s_{l['step']}")
             tokens.append(f"d_{l['duration']}")
+            if l['step'] > 0:
+                tokens.append("SEP")
         return tokens
         '''
         tensor = torch.zeros(len(df), 16,3)

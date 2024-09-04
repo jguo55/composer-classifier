@@ -12,7 +12,7 @@ paths = list(Path(piece_path).glob("*/*.csv"))
 
 #change augmentation vars here
 stretch = 1
-pitch = 4 #+/- pitch
+pitch = -4 #+/- pitch
 
 
 for k in range(len(paths)):
@@ -31,7 +31,7 @@ for k in range(len(paths)):
 
         for i in range(len(df)):
             l = df.iloc[i]
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 print(f"{k}/{len(paths)} -- " + path + f" -- {i}/{len(df)} lines")
             notes.append(l['note']+pitch)
             steps.append(l['step']*stretch)

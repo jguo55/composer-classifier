@@ -2,6 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from pathlib import Path
 from pieceDataset import pieceDataset
+from sklearn.model_selection import KFold
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,6 +47,9 @@ test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
 
 all_categories = train_data.classes
 category_lines = train_data.class_to_idx
+
+print(len(train_data))
+print(len(test_data))
 
 device = (
     "cuda"
