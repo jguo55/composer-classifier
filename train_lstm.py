@@ -68,6 +68,7 @@ for num, (sequence, labels, name) in enumerate(train_dataloader):
         if token not in vocab:
             vocab[token] = len(vocab)
     print(f"building vocab {num+1}/{total} ({timeSince(start)})")
+    
 
 
 #model & training
@@ -115,23 +116,30 @@ testlen = len(test_dataloader)
 for epoch in range(epochs):
     model.train()
     for num, (sequence, labels, name) in enumerate(train_dataloader):
-        #forward prop
-        outputs = model(sequence)
-        #calculate loss
-        loss = criterion(outputs, labels)
+        #break sequence into notes of length 2048
+        begin = 0
+        end = 2048
+        seqlen = len(sequence)
+        while begin < seqlen:
+            #forward prop
+            outputs = model(sequence[begin:end])
+            #calculate loss
+            loss = criterion(outputs, labels)
 
-        #clear gradients
-        optimizer.zero_grad()
+            #clear gradients
+            optimizer.zero_grad()
 
-        loss.backward()
-        optimizer.step()
+            loss.backward()
+            optimizer.step()
 
-        guess, guess_i = categoryFromOutput(outputs)
-        answer = all_categories[labels]
+            guess, guess_i = categoryFromOutput(outputs)
+            answer = all_categories[labels]
 
-        print(f"{epoch+1} {num+1}/{trainlen} {num/trainlen*100:.1f}% ({timeSince(start)}) {loss:.4f} {name} Guess={guess} Correct={answer}")
+            print(f"{epoch+1} {num+1}/{trainlen} {begin}/{seqlen} ({timeSince(start)}) {loss:.4f} {name} Guess={guess} Correct={answer}")
 
-model_path = data_path/"model"/"model_weights_lstm.pth"
+            end+=2048
+            begin+=2048
+model_path = data_path/"model"/"model_weights_lstm_split.pth"
 torch.save(model, model_path)
 
 #testing
