@@ -2,13 +2,16 @@ import torch
 from torch.utils.data import DataLoader
 from pathlib import Path
 from pieceDataset import pieceDataset
-from sklearn.model_selection import KFold
 
 import torch.nn as nn
 import torch.nn.functional as F
 
 import time
 import math
+
+import json
+
+from matplotlib import pyplot as plt
 
 #helper methods
 def timeSince(since):
@@ -25,8 +28,8 @@ def categoryFromOutput(output):
 
 def tokentoidx(sequence):
     for i in range(len(sequence)):
-        if sequence[i] in vocab:
-            sequence[i] = vocab[sequence[i]]
+        if sequence[i][0] in vocab:
+            sequence[i] = vocab[sequence[i][0]]
         else:
             sequence[i] = 0 #unk
     return sequence
@@ -48,9 +51,6 @@ test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
 all_categories = train_data.classes
 category_lines = train_data.class_to_idx
 
-print(len(train_data))
-print(len(test_data))
-
 device = (
     "cuda"
     if torch.cuda.is_available()
@@ -61,16 +61,27 @@ device = (
 
 start = time.time()
 
+#build vocab (only need to run if you change the training data)
+'''
 vocab = {"UNK": 0}
 total = len(train_dataloader)
 for num, (sequence, labels, name) in enumerate(train_dataloader):
     for token in sequence:
+        token = token[0] #WHY IS IT A TUPLE
         if token not in vocab:
             vocab[token] = len(vocab)
     print(f"building vocab {num+1}/{total} ({timeSince(start)})")
+
+#save vocab to json
+vocab_path = data_path/"model"/"vocab.json"
+with open(vocab_path, 'w') as outfile:
+    json.dump(vocab, outfile)
+    '''
+
+vocab_path = data_path/"model"/"vocab.json"
+with open(vocab_path, "r") as file:
+    vocab = json.load(file)
     
-
-
 #model & training
 class RNN(nn.Module):
     def __init__(self, vocab_size, embedding_size, hidden_size, output_size, n_layers):
@@ -86,7 +97,6 @@ class RNN(nn.Module):
 
         self.linear = nn.Linear(hidden_size, output_size)
     
-    #forward is where we connect all the layers basically
     def forward(self, x):
         x = torch.tensor([tokentoidx(x)])
         x = self.embedding(x)
@@ -94,52 +104,48 @@ class RNN(nn.Module):
         out = self.linear(out[:,-1,:])
         return out
     
-
-hidden_size = 128
+#model parameters
+hidden_size = 256
 output_size = 5
 n_layers = 1
 embed_size = 64
 vocab_size = len(vocab)
 
-print(vocab_size)
-
 model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
 epochs = 1
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-#weights = torch.tensor([1638/1025, 1638/181, 1638/60, 1638/136, 1638/236])  
 criterion = nn.CrossEntropyLoss()
 
 trainlen = len(train_dataloader)
 testlen = len(test_dataloader)
 
+all_losses = []
+current_loss = 0
+plot_every = 429 #9 points per epoch
+
 for epoch in range(epochs):
     model.train()
     for num, (sequence, labels, name) in enumerate(train_dataloader):
-        #break sequence into notes of length 2048
-        begin = 0
-        end = 2048
-        seqlen = len(sequence)
-        while begin < seqlen:
-            #forward prop
-            outputs = model(sequence[begin:end])
-            #calculate loss
-            loss = criterion(outputs, labels)
+        outputs = model(sequence)
+        loss = criterion(outputs, labels)
+        optimizer.zero_grad()
 
-            #clear gradients
-            optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            loss.backward()
-            optimizer.step()
+        guess, guess_i = categoryFromOutput(outputs)
+        answer = all_categories[labels]
+        current_loss+=loss
 
-            guess, guess_i = categoryFromOutput(outputs)
-            answer = all_categories[labels]
+        print(f"{epoch+1} {num+1}/{trainlen} ({timeSince(start)}) {loss:.4f} {name} guess: {guess}, ans: {answer}")
+        if num % plot_every == 0:
+            all_losses.append(current_loss / plot_every)
+            current_loss = 0
 
-            print(f"{epoch+1} {num+1}/{trainlen} {begin}/{seqlen} ({timeSince(start)}) {loss:.4f} {name} Guess={guess} Correct={answer}")
-
-            end+=2048
-            begin+=2048
-model_path = data_path/"model"/"model_weights_lstm_split.pth"
+plt.plot(all_losses, label='loss')
+plt.show()
+model_path = data_path/"model"/"model_weights_lstm.pth"
 torch.save(model, model_path)
 
 #testing
@@ -153,4 +159,4 @@ for num, (sequence, labels, name) in enumerate(test_dataloader):
     if labels == guess_i:
         correct+=1
     total+=1
-    print(f"{correct}/{total}, Guess={guess}, Correct={answer}")
+    print(f"{correct}/{total}, guess: {guess}, ans: {answer}")

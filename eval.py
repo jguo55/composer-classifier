@@ -1,40 +1,45 @@
-#THIS IS INCOMPLETE. do not use
 from pathlib import Path
 import torch
+import time
+import math
+from pieceDataset import pieceDataset
 
-
-all_categories = train_data.classes
-category_lines = train_data.class_to_idx
+#helper methods
+def timeSince(since):
+    now = time.time()
+    s = now - since
+    m = math.floor(s / 60)
+    s -= m * 60
+    return '%dm %ds' % (m, s)
 
 def categoryFromOutput(output):
     top_n, top_i = output.topk(1)
     category_i = top_i[0].item()
     return all_categories[category_i], category_i
 
-def evaluate(line_tensor):
-    hidden = rnn.initHidden()
-
-    for i in range(line_tensor[0].size()[0]):
-        output, hidden = rnn(torch.flatten(line_tensor[0][i]), hidden) 
-    return output
+def tokentoidx(sequence):
+    for i in range(len(sequence)):
+        if sequence[i] in vocab:
+            sequence[i] = vocab[sequence[i]]
+        else:
+            sequence[i] = 0 #unk
+    return sequence
 
 data_path = Path("./composer-classifier")
-model_path = data_path/"model"/"model_weights.pth"
-rnn = torch.load(model_path)
+model_path = data_path/"model"/"model_weights_lstm.pth"
+model = torch.load(model_path)
 
-acc = 0
+correct = 0
 total = 0
-for iter in enumerate(test_dataloader):
-    total+=1
-    category = iter[1][1]
-    category_tensor = torch.tensor([category])
-    line_tensor = iter[1][0]
-    line = iter[1][2]
-    output = evaluate(line_tensor)
-
-    guess, guess_i = categoryFromOutput(output)
-        # Print ``iter`` number, loss, name and guess
-    if guess == all_categories[category]:
-        acc+=1
-
-    print(f"{acc}/{total} correct, guess: {guess}, answer: {all_categories[category]}")
+def test(dataloader, c, t):
+    model.eval()
+    correct = 0
+    total = 0
+    for num, (sequence, labels, name) in enumerate(test_dataloader):
+        outputs = model(sequence)
+        guess, guess_i = categoryFromOutput(outputs)
+        answer = all_categories[labels]
+        if labels == guess_i:
+            correct+=1
+        total+=1
+        print(f"{correct}/{total}, Guess={guess}, Correct={answer}")

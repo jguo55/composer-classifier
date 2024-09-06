@@ -1,16 +1,7 @@
 from torch.utils.data import Dataset
 import os
 from pathlib import Path
-import torch
 import pandas as pd
-
-device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps"
-    if torch.backends.mps.is_available()
-    else "cpu"
-)
 
 def find_classes(directory: str):
     classes = sorted(entry.name for entry in os.scandir(directory) if entry.is_dir())
@@ -41,33 +32,10 @@ class pieceDataset(Dataset):
             if l['step'] > 0:
                 tokens.append("SEP")
         return tokens
-        '''
-        tensor = torch.zeros(len(df), 16,3)
-        tensor.to(device)
         
-        for i in range(len(df)):
-            l = df.iloc[i]
-            channel = int(l['channel'])
-            tensor[i][channel*3] = (l['note']-44)
-            tensor[i][channel*3+1] = (l['step']-512)
-            tensor[i][channel*3+2] = (l['duration']-1024)
-        return (tensor)
-        '''
-        
-        '''
-        for i in range(len(df)):
-            l = df.iloc[i]
-            tensor[i][0] = (l['note']-44)/88
-            tensor[i][1] = (l['step']-512)/1024
-            tensor[i][2] = (l['duration']-1024)/2048
-        return (tensor)
-        '''
-        
-    
     def __getitem__(self, index):
         piece = self.load_piece(index)
         class_name = self.paths[index].parent.name
         class_idx = self.class_to_idx[class_name]
         piece_name = os.path.basename(self.paths[index])
-
         return piece, class_idx, piece_name
