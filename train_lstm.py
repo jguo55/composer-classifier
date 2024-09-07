@@ -105,7 +105,7 @@ class RNN(nn.Module):
         return out
     
 #model parameters
-hidden_size = 128
+hidden_size = 256
 output_size = 5
 n_layers = 1
 embed_size = 64
@@ -113,7 +113,7 @@ vocab_size = len(vocab)
 
 model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
-epochs = 3
+epochs = 8
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
@@ -146,7 +146,7 @@ for epoch in range(epochs):
 
 plt.plot(all_losses, label='loss')
 plt.show()
-model_path = data_path/"model"/"model_weights_lstm.pth"
+model_path = data_path/"model"/"model_weights_lstm_256.pth"
 torch.save(model, model_path)
 
 #testing
