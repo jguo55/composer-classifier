@@ -105,7 +105,7 @@ class RNN(nn.Module):
         return out
     
 #model parameters
-hidden_size = 256
+hidden_size = 128
 output_size = 5
 n_layers = 1
 embed_size = 64
@@ -113,7 +113,7 @@ vocab_size = len(vocab)
 
 model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
-epochs = 1
+epochs = 3
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
@@ -136,11 +136,12 @@ for epoch in range(epochs):
 
         guess, guess_i = categoryFromOutput(outputs)
         answer = all_categories[labels]
-        current_loss+=loss
+        current_loss+=loss.item()
 
         print(f"{epoch+1} {num+1}/{trainlen} ({timeSince(start)}) {loss:.4f} {name} guess: {guess}, ans: {answer}")
-        if num % plot_every == 0:
+        if (num+1) % plot_every == 0:
             all_losses.append(current_loss / plot_every)
+            print(all_losses)
             current_loss = 0
 
 plt.plot(all_losses, label='loss')
