@@ -1,8 +1,7 @@
 import json
-import pathlib as Path
 from pieceDataset import pieceDataset
 from torch.utils.data import DataLoader
-
+from pathlib import Path
 
 data_path = Path("./composer-classifier")
 piece_path = data_path/"data"
@@ -24,7 +23,7 @@ for num, (sequence, labels, name) in enumerate(train_dataloader):
         token = token[0] #WHY IS IT A TUPLE
         if token not in vocab:
             vocab[token] = len(vocab)
-    print(f"building vocab {num+1}/{total})")
+    print(f"building vocab {num+1}/{total}")
 
 #save vocab to json
 vocab_path = data_path/"model"/"vocab.json"

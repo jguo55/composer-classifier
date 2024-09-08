@@ -29,7 +29,7 @@ class pieceDataset(Dataset):
             l = df.iloc[i]
             tokens.append(f"n_{l['note']}")
             tokens.append(f"d_{l['duration']}")
-            if l['step'] > 0:
+            if l['step'] >= 15:
                 tokens.append("SEP")
         return tokens
         

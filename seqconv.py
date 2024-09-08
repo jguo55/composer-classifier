@@ -9,7 +9,8 @@ import random
 
 data_path = Path("./composer-classifier")
 
-classes = ["Bach", "Beethoven", "Brahms", "Chopin", "Mozart"]
+raw_path = data_path/"raws"
+classes = sorted(entry.name for entry in os.scandir(raw_path) if entry.is_dir())
 
 for i in classes:
     testpath = data_path/"data"/"test"/i
