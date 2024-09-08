@@ -4,3 +4,9 @@ dataset from: [https://www.kaggle.com/datasets/vincentloos/classical-music-midi-
 
 composers: Bach, Beethoveen, Brahms, Mozart, Chopin
 composers chosen from availability of data as well as influence/distinctiveness.
+
+midi file csv-> note sequence with duration csv
+note sequence csv -> tokens
+tokens -> classification
+
+might add converting from raw midi to midi files in the future
