@@ -21,12 +21,17 @@ piece_path = data_path/"raws"
 
 paths = list(Path(piece_path).glob("*/*.csv"))
 
-#rounds each note value to the nearest 15,20,multiple of 30 to decrease vocab size
+#rounds each note value to the nearest 15,20,30,40, multiple of 30 to decrease vocab size
+#most files use these values to represent sixteenth, triplets, etc. not perfect but should work
 def roundnote(n):
     if n < 18:
         return 15
     elif n < 25:
         return 20
+    elif n < 35:
+        return 30
+    elif n < 50:
+        return 40
     else:
         return 30*round(n/30)
 
