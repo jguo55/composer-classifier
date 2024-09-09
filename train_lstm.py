@@ -70,6 +70,8 @@ vallen = len(val_dataloader)
 losses = []
 val_losses = []
 current_loss = 0
+min_val = float('inf')
+current_patience = patience
 
 best_weights = None
 
@@ -105,11 +107,15 @@ for epoch in range(epochs):
     print(val_losses)
     current_loss = 0
 
-    if len(val_losses) > patience:
-        if val_losses[-1]  > val_losses[-patience-1]:
-            break #train until validation loss starts to increase
+    if current_loss < min_val:
+        min_val = current_loss
+        current_patience = patience
+        best_weights = copy.deepcopy(model.state_dict())
+    else:
+        patience -= 1
+        if patience == 0:
+            break #stop training
     
-    best_weights = copy.deepcopy(model.state_dict())
 
 plt.plot(val_losses)
 plt.plot(losses)
