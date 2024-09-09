@@ -2,16 +2,13 @@ import torch
 from torch.utils.data import DataLoader
 from pathlib import Path
 from pieceDataset import pieceDataset
-
 import torch.nn as nn
-import torch.nn.functional as F
-
 import time
 import math
-
 import json
-
 from matplotlib import pyplot as plt
+from classifier import RNN
+import copy
 
 #helper methods
 def timeSince(since):
@@ -26,15 +23,7 @@ def categoryFromOutput(output):
     category_i = top_i[0].item()
     return all_categories[category_i], category_i
 
-def tokentoidx(sequence):
-    for i in range(len(sequence)):
-        if sequence[i][0] in vocab:
-            sequence[i] = vocab[sequence[i][0]]
-        else:
-            sequence[i] = 0 #unk
-    return sequence
-
-#data 1286 train, 352 test
+#data 1310 train, 328 test
 data_path = Path("./composer-classifier")
 piece_path = data_path/"data"
 
@@ -42,87 +31,47 @@ piece_path = data_path/"data"
 train_path = piece_path/"train"
 test_path = piece_path/"test"
 
-train_data = pieceDataset(train_path)
+full_data = pieceDataset(train_path)
 test_data = pieceDataset(test_path)
+
+train_data, val_data = torch.utils.data.random_split(full_data, [0.8, 0.2])
 
 train_dataloader = DataLoader(train_data, batch_size=1, shuffle=True)
 test_dataloader = DataLoader(test_data, batch_size=1, shuffle=True)
+val_dataloader = DataLoader(val_data, batch_size=1, shuffle=True)
 
-all_categories = train_data.classes
-category_lines = train_data.class_to_idx
-
-device = (
-    "cuda"
-    if torch.cuda.is_available()
-    else "mps"
-    if torch.backends.mps.is_available()
-    else "cpu"
-)
+all_categories = full_data.classes
 
 start = time.time()
 
-#build vocab (only need to run if you change the training data)
-'''
-vocab = {"UNK": 0}
-total = len(train_dataloader)
-for num, (sequence, labels, name) in enumerate(train_dataloader):
-    for token in sequence:
-        token = token[0] #WHY IS IT A TUPLE
-        if token not in vocab:
-            vocab[token] = len(vocab)
-    print(f"building vocab {num+1}/{total} ({timeSince(start)})")
-
-#save vocab to json
-vocab_path = data_path/"model"/"vocab.json"
-with open(vocab_path, 'w') as outfile:
-    json.dump(vocab, outfile)
-    '''
-
+#MAKE SURE TO REBUILD THE VOCAB IF YOU CHANGE THE TRAINING DATA
 vocab_path = data_path/"model"/"vocab.json"
 with open(vocab_path, "r") as file:
     vocab = json.load(file)
-    
-#model & training
-class RNN(nn.Module):
-    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, n_layers):
-        super(RNN, self).__init__()
-        self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.n_layers = n_layers
-        self.embedding_size = embedding_size
 
-        self.embedding = nn.Embedding(vocab_size,embedding_size)
-        self.lstm = nn.LSTM(embedding_size, hidden_size, n_layers, batch_first=True)
-
-        self.linear = nn.Linear(hidden_size, output_size)
-    
-    def forward(self, x):
-        x = torch.tensor([tokentoidx(x)])
-        x = self.embedding(x)
-        out, hn = self.lstm(x)
-        out = self.linear(out[:,-1,:])
-        return out
-    
 #model parameters
-hidden_size = 256
+hidden_size = 64
 output_size = 5
 n_layers = 1
 embed_size = 64
 vocab_size = len(vocab)
+patience = 2
 
 model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
-epochs = 8
+epochs = 100
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.CrossEntropyLoss()
 
 trainlen = len(train_dataloader)
 testlen = len(test_dataloader)
+vallen = len(val_dataloader)
 
-all_losses = []
+losses = []
+val_losses = []
 current_loss = 0
-plot_every = 429 #9 points per epoch
+
+best_weights = None
 
 for epoch in range(epochs):
     model.train()
@@ -139,16 +88,39 @@ for epoch in range(epochs):
         current_loss+=loss.item()
 
         print(f"{epoch+1} {num+1}/{trainlen} ({timeSince(start)}) {loss:.4f} {name} guess: {guess}, ans: {answer}")
-        if (num+1) % plot_every == 0:
-            all_losses.append(current_loss / plot_every)
-            print(all_losses)
-            current_loss = 0
+    losses.append(current_loss/trainlen)
+    current_loss = 0
 
-plt.plot(all_losses, label='loss')
+    model.eval()
+    for num, (sequence, labels, name) in enumerate(val_dataloader):
+        outputs = model(sequence)
+        loss = criterion(outputs, labels) #compute loss but don't use it to train
+        guess, guess_i = categoryFromOutput(outputs)
+        answer = all_categories[labels]
+        current_loss+=loss.item()
+
+        print(f"{epoch+1} {num+1}/{vallen} ({timeSince(start)}) {loss:.4f} {name} guess: {guess}, ans: {answer}")
+    val_losses.append(current_loss / vallen)
+    print(losses)
+    print(val_losses)
+    current_loss = 0
+
+    if len(val_losses) > patience:
+        if val_losses[-1]  > val_losses[-patience-1]:
+            break #train until validation loss starts to increase
+    
+    best_weights = copy.deepcopy(model.state_dict())
+
+plt.plot(val_losses)
+plt.plot(losses)
 plt.show()
-model_path = data_path/"model"/"model_weights_lstm_256.pth"
+
+model.load_state_dict(best_weights) #load from the best instance
+model_path = data_path/"model"/"model_weights_lstm_val.pth"
 torch.save(model, model_path)
 
+
+#model = torch.load(model_path)
 #testing
 model.eval()
 correct = 0
