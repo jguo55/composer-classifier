@@ -37,5 +37,28 @@ class RNN(nn.Module):
         x = torch.tensor([tokentoidx(x)])
         x = self.embedding(x)
         out, hn = self.lstm(x)
+        out = torch.relu(self.linear(out[:,-1,:]))
+        return out
+
+
+class Transformer(nn.Module):
+    def __init__(self, vocab_size, embedding_size, hidden_size, output_size, n_layers):
+        super(RNN, self).__init__()
+        self.vocab_size = vocab_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.n_layers = n_layers
+        self.embedding_size = embedding_size
+
+        self.embedding = nn.Embedding(vocab_size,embedding_size)
+        self.lstm = nn.LSTM(embedding_size, hidden_size, n_layers, batch_first=True)
+
+        self.linear = nn.Linear(hidden_size, output_size)
+    
+    def forward(self, x):
+        x = torch.tensor([tokentoidx(x)])
+        x = self.embedding(x)
+        out, hn = self.lstm(x)
         out = self.linear(out[:,-1,:])
         return out
+    

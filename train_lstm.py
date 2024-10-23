@@ -50,12 +50,12 @@ with open(vocab_path, "r") as file:
     vocab = json.load(file)
 
 #model parameters
-hidden_size = 64
+hidden_size = 32
 output_size = 5
 n_layers = 1
 embed_size = 64
 vocab_size = len(vocab)
-patience = 2
+patience = 10
 
 model = RNN(vocab_size, embed_size, hidden_size, output_size, n_layers)
 
@@ -103,18 +103,19 @@ for epoch in range(epochs):
 
         print(f"{epoch+1} {num+1}/{vallen} ({timeSince(start)}) {loss:.4f} {name} guess: {guess}, ans: {answer}")
     val_losses.append(current_loss / vallen)
-    print(losses)
-    print(val_losses)
-    current_loss = 0
 
     if current_loss < min_val:
         min_val = current_loss
         current_patience = patience
         best_weights = copy.deepcopy(model.state_dict())
     else:
-        patience -= 1
-        if patience == 0:
+        current_patience -= 1
+        if current_patience == 0:
             break #stop training
+        
+    print(losses)
+    print(val_losses)
+    current_loss = 0
     
 
 plt.plot(val_losses)
@@ -122,7 +123,7 @@ plt.plot(losses)
 plt.show()
 
 model.load_state_dict(best_weights) #load from the best instance
-model_path = data_path/"model"/"model_weights_lstm_val.pth"
+model_path = data_path/"model"/"model_weights_lstm_val_relu.pth"
 torch.save(model, model_path)
 
 
